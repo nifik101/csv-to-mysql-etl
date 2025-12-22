@@ -6,6 +6,7 @@ Orkestrerar hela ETL-processen:
 2. Transformerar data till databasformat (4 separata DataFrames)
 3. Laddar data till MySQL-databas med UPSERT-logik
 """
+
 import os
 import sys
 from pathlib import Path
@@ -45,7 +46,7 @@ Path("logs").mkdir(exist_ok=True)
 def main():
     """
     Huvudfunktion för ETL-pipeline.
-    
+
     Läser CSV-fil, transformerar data och laddar till MySQL-databas.
     Hanterar fel och loggar hela processen.
     """
@@ -88,9 +89,29 @@ def main():
         logger.info("-" * 60)
         logger.info("STEG 3: Laddning till databas")
         logger.info("-" * 60)
-        conn = get_mysql_connection()
 
+        # Validera att vi har data att ladda innan vi ansluter till databasen
+        total_data_rows = len(users_df) + len(perf_df) + len(retention_df) + len(nps_df)
+        if total_data_rows == 0:
+            logger.error("Ingen data att ladda till databasen")
+            logger.error("Kritiskt fel: Kan inte fortsätta utan data")
+            sys.exit(1)
+
+        logger.info(f"Förbereder laddning av {total_data_rows} totala rader till databasen")
+
+        conn = None
         try:
+            logger.info("Ansluter till MySQL-databas...")
+            conn = get_mysql_connection()
+
+            # Validera att anslutningen är aktiv
+            if not conn.is_connected():
+                logger.error("Databasanslutning misslyckades")
+                logger.error("Kritiskt fel: Kan inte ladda data")
+                sys.exit(1)
+
+            logger.info("Databasanslutning etablerad")
+
             results = load_to_mysql(users_df, perf_df, retention_df, nps_df, conn)
 
             logger.info("-" * 60)
@@ -101,12 +122,19 @@ def main():
                 logger.info(f"  {table}: {stats}")
             logger.info("=" * 60)
 
+        except SystemExit:
+            # SystemExit kommer från load_to_mysql vid kritiska fel
+            # Låt den propagera uppåt
+            raise
         except Exception as e:
             logger.error(f"Fel vid laddning till databas: {e}")
-            raise
+            logger.exception("Fullständig stack trace:")
+            logger.error("Kritiskt fel: ETL-pipeline misslyckades")
+            sys.exit(1)
         finally:
-            conn.close()
-            logger.debug("Databasanslutning stängd")
+            if conn and conn.is_connected():
+                conn.close()
+                logger.debug("Databasanslutning stängd")
 
     except FileNotFoundError as e:
         logger.error(f"Filen hittades inte: {e}")
