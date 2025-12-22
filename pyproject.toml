@@ -1,0 +1,37 @@
+[project]
+name = "csv-to-mysql-etl"
+version = "1.0.0"
+description = "ETL pipeline for daily performance data to MySQL"
+requires-python = ">=3.8"
+dependencies = [
+    "pandas>=2.0.0",
+    "mysql-connector-python>=8.0.0",
+    "loguru>=0.7.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by line-length)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["etl_pipeline", "db"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+

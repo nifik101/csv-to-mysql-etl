@@ -1,2 +1,4 @@
-pandas
-mysql-connector-python
+pandas>=2.0.0
+mysql-connector-python>=8.0.0
+loguru>=0.7.0
+python-dotenv>=1.0.0

@@ -1,7 +1,45 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment variables
 .env
 config.py
 
+# IDE
 .vscode/
-test/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data files
+/data
+*.csv
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+Untitled-*
+*.tmp
