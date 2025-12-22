@@ -43,3 +43,5 @@ htmlcov/
 # Temporary files
 Untitled-*
 *.tmp
+COMMIT_PLAN.md
+my_structure.md
