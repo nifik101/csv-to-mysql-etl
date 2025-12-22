@@ -22,23 +22,23 @@ def extract_csv(path):
         UnicodeDecodeError: Om encoding-problem uppstår
     """
     logger.info(f"Startar extraktion av CSV-fil: {path}")
-    
+
     try:
         # Försök först med utf-8 för svenska tecken
         try:
             df = pd.read_csv(path, encoding="utf-8")
-            logger.debug(f"CSV-fil lästes in med utf-8 encoding")
+            logger.debug("CSV-fil lästes in med utf-8 encoding")
         except UnicodeDecodeError:
             # Fallback till latin1 om utf-8 misslyckas
-            logger.warning(f"utf-8 encoding misslyckades, försöker med latin1")
+            logger.warning("utf-8 encoding misslyckades, försöker med latin1")
             df = pd.read_csv(path, encoding="latin1")
-            logger.debug(f"CSV-fil lästes in med latin1 encoding")
-        
+            logger.debug("CSV-fil lästes in med latin1 encoding")
+
         logger.info(f"Extraktion klar: {len(df)} rader lästes in")
         logger.debug(f"Kolumner i DataFrame: {list(df.columns)}")
-        
+
         return df
-        
+
     except FileNotFoundError:
         logger.error(f"Filen hittades inte: {path}")
         raise
