@@ -1,5 +1,8 @@
 """Modul för att transformera CSV-data till databasformat."""
+
+import os
 import re
+import sys
 from datetime import date
 
 import pandas as pd
@@ -9,13 +12,13 @@ from loguru import logger
 def parse_agent(agent_str):
     """
     Parsar Agent-kolumnen för att extrahera user_id och namn.
-    
+
     Format: "Namn Efternamn (12345678)"
     Exempel: "Bajram Krushevci (10190035)"
-    
+
     Args:
         agent_str (str): Agent-sträng i formatet "Namn (ID)"
-        
+
     Returns:
         tuple: (namn, user_id) eller (None, None) om parsing misslyckas
     """
@@ -23,7 +26,7 @@ def parse_agent(agent_str):
         logger.warning(f"Ogiltig Agent-värde: {agent_str}")
         return None, None
 
-    pattern = r'^(.*)\s+\((\d+)\)\s*$'
+    pattern = r"^(.*)\s+\((\d+)\)\s*$"
     match = re.match(pattern, agent_str)
 
     if not match:
@@ -40,12 +43,12 @@ def parse_agent(agent_str):
 def transform_to_users(df):
     """
     Skapar users DataFrame från Agent-kolumnen.
-    
+
     Extraherar user_id och namn från varje rad och skapar unika användare.
-    
+
     Args:
         df (pd.DataFrame): DataFrame med Agent-kolumn
-        
+
     Returns:
         pd.DataFrame: DataFrame med kolumner user_id och namn
     """
@@ -59,6 +62,7 @@ def transform_to_users(df):
 
     if not users_data:
         logger.warning("Inga användare kunde extraheras från Agent-kolumnen")
+        logger.warning("Returnerar tom DataFrame - kontrollera Agent-kolumnens format")
         return pd.DataFrame(columns=["user_id", "namn"])
 
     users_df = pd.DataFrame(users_data)
@@ -74,14 +78,14 @@ def transform_to_users(df):
 def transform_to_daily_performance(df, current_date):
     """
     Transformera CSV-data till daily_performance DataFrame.
-    
+
     Mappar CSV-kolumner till daily_performance-tabellens kolumner
     och lägger till aktuellt datum.
-    
+
     Args:
         df (pd.DataFrame): DataFrame med CSV-data
         current_date (date): Datum som ska användas för alla rader
-        
+
     Returns:
         pd.DataFrame: DataFrame formaterad för daily_performance-tabellen
     """
@@ -129,10 +133,25 @@ def transform_to_daily_performance(df, current_date):
     perf_df = pd.DataFrame(performance_data)
 
     # Konvertera datatyper
-    int_columns = ["samtal", "acd_seconds", "acw_seconds", "hold_seconds",
-                   "bb_antal", "pp_antal", "tv_antal", "mbb_antal", "other_antal"]
-    decimal_columns = ["koppling_pct", "erbjud_pct", "save_provis_kr",
-                       "provis_kr", "fmc_prov_kr", "value_change_kr"]
+    int_columns = [
+        "samtal",
+        "acd_seconds",
+        "acw_seconds",
+        "hold_seconds",
+        "bb_antal",
+        "pp_antal",
+        "tv_antal",
+        "mbb_antal",
+        "other_antal",
+    ]
+    decimal_columns = [
+        "koppling_pct",
+        "erbjud_pct",
+        "save_provis_kr",
+        "provis_kr",
+        "fmc_prov_kr",
+        "value_change_kr",
+    ]
 
     for col in int_columns:
         if col in perf_df.columns:
@@ -157,14 +176,14 @@ def transform_to_daily_performance(df, current_date):
 def transform_to_daily_retention(df, current_date):
     """
     Transformera CSV-data till daily_retention DataFrame.
-    
+
     Mappar CSV-kolumner till daily_retention-tabellens kolumner
     och lägger till aktuellt datum.
-    
+
     Args:
         df (pd.DataFrame): DataFrame med CSV-data
         current_date (date): Datum som ska användas för alla rader
-        
+
     Returns:
         pd.DataFrame: DataFrame formaterad för daily_retention-tabellen
     """
@@ -218,14 +237,14 @@ def transform_to_daily_retention(df, current_date):
 def transform_to_daily_nps(df, current_date):
     """
     Transformera CSV-data till daily_nps DataFrame.
-    
+
     Mappar CSV-kolumner till daily_nps-tabellens kolumner
     och lägger till aktuellt datum.
-    
+
     Args:
         df (pd.DataFrame): DataFrame med CSV-data
         current_date (date): Datum som ska användas för alla rader
-        
+
     Returns:
         pd.DataFrame: DataFrame formaterad för daily_nps-tabellen
     """
@@ -272,7 +291,9 @@ def transform_to_daily_nps(df, current_date):
             nps_df[col] = pd.to_numeric(nps_df[col], errors="coerce")
 
     logger.info(f"Skapade {len(nps_df)} rader för daily_nps")
-    logger.debug(f"Exempel på NPS-värden (kan vara negativa): {nps_df['nps_score'].describe() if 'nps_score' in nps_df.columns else 'N/A'}")
+    logger.debug(
+        f"Exempel på NPS-värden (kan vara negativa): {nps_df['nps_score'].describe() if 'nps_score' in nps_df.columns else 'N/A'}"
+    )
 
     return nps_df
 
@@ -280,7 +301,7 @@ def transform_to_daily_nps(df, current_date):
 def transform_csv(df, save_path):
     """
     Huvudfunktion för att transformera CSV-data till databasformat.
-    
+
     Orkestrerar alla transformationer:
     1. Parsar Agent-kolumnen
     2. Skapar users DataFrame
@@ -288,53 +309,114 @@ def transform_csv(df, save_path):
     4. Skapar daily_retention DataFrame
     5. Skapar daily_nps DataFrame
     6. Sparar processade dataframes till CSV för audit trail
-    
+
     Args:
         df (pd.DataFrame): DataFrame med rå CSV-data
         save_path (str): Bas-sökväg för att spara processade filer
-        
+
     Returns:
         tuple: (users_df, perf_df, retention_df, nps_df) - fyra DataFrames
+
+    Raises:
+        ValueError: Om kritiska kolumner saknas eller data är korrupt
+        SystemExit: Om transformation misslyckas eller data är ogiltig
     """
     logger.info("Startar transform-process")
+
+    # Validera att DataFrame inte är tom
+    if df.empty:
+        logger.error("DataFrame är tom - kan inte transformera")
+        logger.error("Kritiskt fel: Inget data att transformera")
+        sys.exit(1)
 
     # Standardisera kolumnnamn (hantera svenska tecken)
     original_columns = df.columns.tolist()
     df.columns = df.columns.str.strip()
     logger.debug(f"Originala kolumner: {original_columns}")
 
+    # Validera att Agent-kolumnen finns (kritisk för alla transformationer)
+    if "Agent" not in df.columns:
+        logger.error("Saknar kritisk kolumn 'Agent' - kan inte transformera data")
+        logger.error(f"Tillgängliga kolumner: {list(df.columns)}")
+        logger.error("Kritiskt fel: Data-struktur är ogiltig")
+        sys.exit(1)
+
     # Hämta dagens datum
     current_date = date.today()
     logger.info(f"Använder datum: {current_date}")
 
-    # Skapa users DataFrame
-    users_df = transform_to_users(df)
+    try:
+        # Skapa users DataFrame
+        logger.info("Steg 1/4: Skapar users DataFrame")
+        users_df = transform_to_users(df)
 
-    # Skapa daily DataFrames
-    perf_df = transform_to_daily_performance(df, current_date)
-    retention_df = transform_to_daily_retention(df, current_date)
-    nps_df = transform_to_daily_nps(df, current_date)
+        # Validera att vi har minst några användare
+        if users_df.empty:
+            logger.warning("Inga användare kunde extraheras från Agent-kolumnen")
+            logger.warning("Fortsätter men inga users kommer att laddas till databasen")
 
-    # Spara processade dataframes för audit trail
-    import os
-    base_path = os.path.splitext(save_path)[0]
+        # Skapa daily DataFrames
+        logger.info("Steg 2/4: Skapar daily_performance DataFrame")
+        perf_df = transform_to_daily_performance(df, current_date)
 
-    users_path = f"{base_path}_users.csv"
-    perf_path = f"{base_path}_performance.csv"
-    retention_path = f"{base_path}_retention.csv"
-    nps_path = f"{base_path}_nps.csv"
+        logger.info("Steg 3/4: Skapar daily_retention DataFrame")
+        retention_df = transform_to_daily_retention(df, current_date)
 
-    users_df.to_csv(users_path, index=False)
-    perf_df.to_csv(perf_path, index=False)
-    retention_df.to_csv(retention_path, index=False)
-    nps_df.to_csv(nps_path, index=False)
+        logger.info("Steg 4/4: Skapar daily_nps DataFrame")
+        nps_df = transform_to_daily_nps(df, current_date)
 
-    logger.info("Sparade processade filer:")
-    logger.info(f"  - {users_path}")
-    logger.info(f"  - {perf_path}")
-    logger.info(f"  - {retention_path}")
-    logger.info(f"  - {nps_path}")
+        # Validera att vi har minst något data att spara
+        total_rows = len(perf_df) + len(retention_df) + len(nps_df)
+        if total_rows == 0 and users_df.empty:
+            logger.error("Ingen data kunde transformeras från CSV-filen")
+            logger.error("Kritiskt fel: Kan inte fortsätta med tom data")
+            sys.exit(1)
 
-    logger.info("Transform-process klar")
+        # Spara processade dataframes för audit trail
+        base_path = os.path.splitext(save_path)[0]
+        processed_dir = os.path.dirname(base_path)
 
-    return users_df, perf_df, retention_df, nps_df
+        # Skapa processed-katalog om den inte finns
+        if processed_dir and not os.path.exists(processed_dir):
+            try:
+                os.makedirs(processed_dir, exist_ok=True)
+                logger.debug(f"Skapade katalog: {processed_dir}")
+            except OSError as e:
+                logger.warning(f"Kunde inte skapa katalog {processed_dir}: {e}")
+                logger.warning("Fortsätter utan att spara processade filer")
+
+        users_path = f"{base_path}_users.csv"
+        perf_path = f"{base_path}_performance.csv"
+        retention_path = f"{base_path}_retention.csv"
+        nps_path = f"{base_path}_nps.csv"
+
+        try:
+            users_df.to_csv(users_path, index=False)
+            perf_df.to_csv(perf_path, index=False)
+            retention_df.to_csv(retention_path, index=False)
+            nps_df.to_csv(nps_path, index=False)
+
+            logger.info("Sparade processade filer:")
+            logger.info(f"  - {users_path}")
+            logger.info(f"  - {perf_path}")
+            logger.info(f"  - {retention_path}")
+            logger.info(f"  - {nps_path}")
+        except Exception as e:
+            logger.error(f"Fel vid sparande av processade filer: {e}")
+            logger.warning(
+                "Fortsätter trots spar-fel - data kommer fortfarande laddas till databasen"
+            )
+
+        logger.info("Transform-process klar")
+        logger.info(
+            f"Sammanfattning: {len(users_df)} users, {len(perf_df)} performance, "
+            f"{len(retention_df)} retention, {len(nps_df)} nps rader"
+        )
+
+        return users_df, perf_df, retention_df, nps_df
+
+    except Exception as e:
+        logger.error(f"Kritiskt fel vid transformation: {e}")
+        logger.exception("Fullständig stack trace:")
+        logger.error("Kritiskt fel: Kan inte fortsätta med korrupt data")
+        sys.exit(1)
