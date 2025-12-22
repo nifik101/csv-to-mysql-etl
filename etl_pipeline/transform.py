@@ -9,6 +9,39 @@ import pandas as pd
 from loguru import logger
 
 
+def clean_swedish_numeric_string(s):
+    """
+    Rensar en svensk numerisk sträng (t.ex. "1.234,56 kr") för att möjliggöra konvertering till float.
+    - Tar bort "kr"
+    - Tar bort mellanslag
+    - Ersätter tusentalsavgränsare (punkt '.') med tom sträng
+    - Ersätter decimaltecken (komma ',') med punkt '.'
+    - Hanterar negativa tal.
+    """
+    if pd.isna(s) or not isinstance(s, str):
+        return s
+    
+    # Remove 'kr' and any surrounding whitespace
+    s = s.replace("kr", "").strip()
+    
+    # Check for negative sign and temporarily remove it
+    is_negative = s.startswith('-')
+    if is_negative:
+        s = s[1:]
+
+    # Remove thousands separator ('.')
+    s = s.replace(".", "")
+    
+    # Replace decimal comma (',') with dot ('.')
+    s = s.replace(",", ".")
+
+    # Add negative sign back if it was there
+    if is_negative:
+        s = '-' + s
+
+    return s
+
+
 def parse_agent(agent_str):
     """
     Parsar Agent-kolumnen för att extrahera user_id och namn.
@@ -159,6 +192,8 @@ def transform_to_daily_performance(df, current_date):
 
     for col in decimal_columns:
         if col in perf_df.columns:
+            # Apply cleaning function before converting to numeric
+            perf_df[col] = perf_df[col].apply(clean_swedish_numeric_string)
             perf_df[col] = pd.to_numeric(perf_df[col], errors="coerce")
 
     # Validering: samtal bör vara >= 0 (men tillåt None)
