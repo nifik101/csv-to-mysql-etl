@@ -1,4 +1,7 @@
 """Modul för att ladda data till MySQL-databas."""
+
+import sys
+
 import pandas as pd
 from loguru import logger
 
@@ -6,14 +9,14 @@ from loguru import logger
 def load_users(df, connection):
     """
     Laddar användardata till users-tabellen med UPSERT-logik.
-    
+
     Använder INSERT ... ON DUPLICATE KEY UPDATE för att uppdatera
     befintliga användare eller skapa nya.
-    
+
     Args:
         df (pd.DataFrame): DataFrame med kolumner user_id och namn
         connection: MySQL-anslutningsobjekt
-        
+
     Returns:
         tuple: (rows_inserted, rows_updated) - antal rader som påverkades
     """
@@ -39,7 +42,7 @@ def load_users(df, connection):
     data = [(row["user_id"], row["namn"]) for _, row in df.iterrows()]
 
     try:
-        rows_affected = cursor.executemany(insert_query, data)
+        cursor.executemany(insert_query, data)
         connection.commit()
 
         # För UPSERT kan vi inte enkelt få antal inserts vs updates
@@ -60,14 +63,14 @@ def load_users(df, connection):
 def load_daily_performance(df, connection):
     """
     Laddar daglig prestationsdata till daily_performance-tabellen med UPSERT-logik.
-    
+
     Använder INSERT ... ON DUPLICATE KEY UPDATE för att uppdatera
     befintliga dagliga poster eller skapa nya.
-    
+
     Args:
         df (pd.DataFrame): DataFrame formaterad för daily_performance-tabellen
         connection: MySQL-anslutningsobjekt
-        
+
     Returns:
         int: Antal rader som påverkades
     """
@@ -106,25 +109,31 @@ def load_daily_performance(df, connection):
             value_change_kr = VALUES(value_change_kr)
     """
 
+    def convert_nan_to_none(value):
+        """Konverterar NaN/NaT till None för SQL."""
+        if pd.isna(value):
+            return None
+        return value
+
     data = [
         (
             row["user_id"],
             row["datum"],
-            row.get("samtal"),
-            row.get("acd_seconds"),
-            row.get("acw_seconds"),
-            row.get("hold_seconds"),
-            row.get("koppling_pct"),
-            row.get("bb_antal"),
-            row.get("pp_antal"),
-            row.get("tv_antal"),
-            row.get("mbb_antal"),
-            row.get("other_antal"),
-            row.get("erbjud_pct"),
-            row.get("save_provis_kr"),
-            row.get("provis_kr"),
-            row.get("fmc_prov_kr"),
-            row.get("value_change_kr"),
+            convert_nan_to_none(row.get("samtal")),
+            convert_nan_to_none(row.get("acd_seconds")),
+            convert_nan_to_none(row.get("acw_seconds")),
+            convert_nan_to_none(row.get("hold_seconds")),
+            convert_nan_to_none(row.get("koppling_pct")),
+            convert_nan_to_none(row.get("bb_antal")),
+            convert_nan_to_none(row.get("pp_antal")),
+            convert_nan_to_none(row.get("tv_antal")),
+            convert_nan_to_none(row.get("mbb_antal")),
+            convert_nan_to_none(row.get("other_antal")),
+            convert_nan_to_none(row.get("erbjud_pct")),
+            convert_nan_to_none(row.get("save_provis_kr")),
+            convert_nan_to_none(row.get("provis_kr")),
+            convert_nan_to_none(row.get("fmc_prov_kr")),
+            convert_nan_to_none(row.get("value_change_kr")),
         )
         for _, row in df.iterrows()
     ]
@@ -149,14 +158,14 @@ def load_daily_performance(df, connection):
 def load_daily_retention(df, connection):
     """
     Laddar daglig retention-data till daily_retention-tabellen med UPSERT-logik.
-    
+
     Använder INSERT ... ON DUPLICATE KEY UPDATE för att uppdatera
     befintliga dagliga poster eller skapa nya.
-    
+
     Args:
         df (pd.DataFrame): DataFrame formaterad för daily_retention-tabellen
         connection: MySQL-anslutningsobjekt
-        
+
     Returns:
         int: Antal rader som påverkades
     """
@@ -184,15 +193,21 @@ def load_daily_retention(df, connection):
             vand_antal = VALUES(vand_antal)
     """
 
+    def convert_nan_to_none(value):
+        """Konverterar NaN/NaT till None för SQL."""
+        if pd.isna(value):
+            return None
+        return value
+
     data = [
         (
             row["user_id"],
             row["datum"],
-            row.get("vand_tv_pct"),
-            row.get("vand_bb_pct"),
-            row.get("vand_pp_pct"),
-            row.get("vand_total_pct"),
-            row.get("vand_antal"),
+            convert_nan_to_none(row.get("vand_tv_pct")),
+            convert_nan_to_none(row.get("vand_bb_pct")),
+            convert_nan_to_none(row.get("vand_pp_pct")),
+            convert_nan_to_none(row.get("vand_total_pct")),
+            convert_nan_to_none(row.get("vand_antal")),
         )
         for _, row in df.iterrows()
     ]
@@ -216,14 +231,14 @@ def load_daily_retention(df, connection):
 def load_daily_nps(df, connection):
     """
     Laddar daglig NPS-data till daily_nps-tabellen med UPSERT-logik.
-    
+
     Använder INSERT ... ON DUPLICATE KEY UPDATE för att uppdatera
     befintliga dagliga poster eller skapa nya.
-    
+
     Args:
         df (pd.DataFrame): DataFrame formaterad för daily_nps-tabellen
         connection: MySQL-anslutningsobjekt
-        
+
     Returns:
         int: Antal rader som påverkades
     """
@@ -249,14 +264,20 @@ def load_daily_nps(df, connection):
             cb_pct = VALUES(cb_pct)
     """
 
+    def convert_nan_to_none(value):
+        """Konverterar NaN/NaT till None för SQL."""
+        if pd.isna(value):
+            return None
+        return value
+
     data = [
         (
             row["user_id"],
             row["datum"],
-            row.get("nps_antal_svar"),
-            row.get("nps_score"),
-            row.get("csat_pct"),
-            row.get("cb_pct"),
+            convert_nan_to_none(row.get("nps_antal_svar")),
+            convert_nan_to_none(row.get("nps_score")),
+            convert_nan_to_none(row.get("csat_pct")),
+            convert_nan_to_none(row.get("cb_pct")),
         )
         for _, row in df.iterrows()
     ]
@@ -266,7 +287,9 @@ def load_daily_nps(df, connection):
         connection.commit()
 
         logger.info(f"Daily NPS: {len(data)} rader bearbetade")
-        logger.debug(f"Exempel på NPS-data (kan innehålla negativa värden): {df[['nps_score']].describe() if 'nps_score' in df.columns else 'N/A'}")
+        logger.debug(
+            f"Exempel på NPS-data (kan innehålla negativa värden): {df[['nps_score']].describe() if 'nps_score' in df.columns else 'N/A'}"
+        )
 
         return len(data)
 
@@ -281,50 +304,109 @@ def load_daily_nps(df, connection):
 def load_to_mysql(users_df, perf_df, retention_df, nps_df, connection):
     """
     Huvudfunktion för att ladda alla DataFrames till MySQL-databasen.
-    
-    Orkestrerar laddningen i rätt ordning:
+
+    Orkestrerar laddningen i rätt ordning med transaktionshantering:
     1. Users först (för referentiell integritet)
     2. Sedan daily-tabellerna
-    
+
+    Använder transaktioner för att säkerställa atomisk laddning:
+    - Om något steg misslyckas, rollbackas allt
+    - Förhindrar korrupt data i databasen
+
     Args:
         users_df (pd.DataFrame): Users DataFrame
         perf_df (pd.DataFrame): Daily performance DataFrame
         retention_df (pd.DataFrame): Daily retention DataFrame
         nps_df (pd.DataFrame): Daily NPS DataFrame
         connection: MySQL-anslutningsobjekt
-        
+
     Returns:
         dict: Dictionary med antal rader som laddades per tabell
+
+    Raises:
+        SystemExit: Om databasladdning misslyckas kritiskt
     """
     logger.info("Startar laddning till MySQL-databas")
 
+    # Validera att connection är aktiv
+    if not connection.is_connected():
+        logger.error("Databasanslutning är inte aktiv")
+        logger.error("Kritiskt fel: Kan inte ladda data")
+        sys.exit(1)
+
     results = {}
 
+    # Starta transaktion - alla steg måste lyckas eller inget sparas
     try:
-        # Ladda users först
+        # Sätt autocommit till False för transaktionshantering
+        connection.autocommit = False
+
+        # Ladda users först (kritisk för foreign keys)
         logger.info("Steg 1/4: Laddar users")
-        users_inserted, users_updated = load_users(users_df, connection)
-        results["users"] = {"inserted": users_inserted, "updated": users_updated}
+        try:
+            users_inserted, users_updated = load_users(users_df, connection)
+            results["users"] = {"inserted": users_inserted, "updated": users_updated}
+            logger.info(f"Users laddade: {users_inserted} inserts, {users_updated} updates")
+        except Exception as e:
+            logger.error(f"Fel vid laddning av users: {e}")
+            logger.error("Kritiskt fel: Kan inte fortsätta utan users")
+            connection.rollback()
+            sys.exit(1)
 
         # Ladda daily-tabellerna
         logger.info("Steg 2/4: Laddar daily_performance")
-        perf_rows = load_daily_performance(perf_df, connection)
-        results["daily_performance"] = {"rows": perf_rows}
+        try:
+            perf_rows = load_daily_performance(perf_df, connection)
+            results["daily_performance"] = {"rows": perf_rows}
+            logger.info(f"Daily performance laddade: {perf_rows} rader")
+        except Exception as e:
+            logger.error(f"Fel vid laddning av daily_performance: {e}")
+            logger.error("Rollbackar hela transaktionen")
+            connection.rollback()
+            sys.exit(1)
 
         logger.info("Steg 3/4: Laddar daily_retention")
-        retention_rows = load_daily_retention(retention_df, connection)
-        results["daily_retention"] = {"rows": retention_rows}
+        try:
+            retention_rows = load_daily_retention(retention_df, connection)
+            results["daily_retention"] = {"rows": retention_rows}
+            logger.info(f"Daily retention laddade: {retention_rows} rader")
+        except Exception as e:
+            logger.error(f"Fel vid laddning av daily_retention: {e}")
+            logger.error("Rollbackar hela transaktionen")
+            connection.rollback()
+            sys.exit(1)
 
         logger.info("Steg 4/4: Laddar daily_nps")
-        nps_rows = load_daily_nps(nps_df, connection)
-        results["daily_nps"] = {"rows": nps_rows}
+        try:
+            nps_rows = load_daily_nps(nps_df, connection)
+            results["daily_nps"] = {"rows": nps_rows}
+            logger.info(f"Daily NPS laddade: {nps_rows} rader")
+        except Exception as e:
+            logger.error(f"Fel vid laddning av daily_nps: {e}")
+            logger.error("Rollbackar hela transaktionen")
+            connection.rollback()
+            sys.exit(1)
 
-        logger.info("Alla tabeller laddade framgångsrikt")
+        # Alla steg lyckades - commit transaktionen
+        connection.commit()
+        logger.info("Alla tabeller laddade framgångsrikt - transaktion committad")
         logger.info(f"Sammanfattning: {results}")
 
         return results
 
     except Exception as e:
         logger.error(f"Kritiskt fel vid laddning till databas: {e}")
-        connection.rollback()
-        raise
+        logger.exception("Fullständig stack trace:")
+        try:
+            connection.rollback()
+            logger.info("Transaktion rollbackad - inga ändringar sparades")
+        except Exception as rollback_error:
+            logger.error(f"Fel vid rollback: {rollback_error}")
+        logger.error("Kritiskt fel: Kan inte fortsätta")
+        sys.exit(1)
+    finally:
+        # Återställ autocommit till default
+        try:
+            connection.autocommit = True
+        except Exception:
+            pass
