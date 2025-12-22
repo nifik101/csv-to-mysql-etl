@@ -1,4 +1,5 @@
 """Modul för MySQL-databasanslutning."""
+
 import os
 
 import mysql.connector
@@ -11,16 +12,16 @@ load_dotenv()
 def get_mysql_connection():
     """
     Skapar och returnerar en MySQL-databasanslutning.
-    
+
     Läser databasinställningar från miljövariabler:
     - MYSQL_HOST
     - MYSQL_USER
     - MYSQL_PASSWORD
     - MYSQL_DATABASE
-    
+
     Returns:
         mysql.connector.connection.MySQLConnection: MySQL-anslutningsobjekt
-        
+
     Raises:
         mysql.connector.Error: Om anslutningen misslyckas
     """

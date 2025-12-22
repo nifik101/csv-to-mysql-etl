@@ -12,6 +12,7 @@ from db.mysql_connection import get_mysql_connection
 # Load environment variables
 load_dotenv()
 
+
 def test_connection():
     """Test MySQL database connection."""
     print("=" * 60)
@@ -66,7 +67,7 @@ def test_connection():
             connection.close()
             print("\nConnection closed.")
 
+
 if __name__ == "__main__":
     success = test_connection()
     sys.exit(0 if success else 1)
-
