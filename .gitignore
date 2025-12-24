@@ -5,3 +5,10 @@ config.py
 
 .vscode/
 test/
+
+/data
+/logs
+
+my_structure.md
+COMMIT_PLAN.md
+
