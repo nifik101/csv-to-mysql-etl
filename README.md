@@ -29,6 +29,11 @@ Load (MySQL)
 - MySQL
 - mysql-connector-python
 - SQL
+- Ruff
+- uv
+- pandera
+- loguru
+- python-dotenv
 
 ---
 
@@ -39,9 +44,9 @@ DE_Project/
 │
 ├── data/
 │   ├── raw/
-│   │   └── Raw_Superstore.csv
+│   │   └── raw_data_example.csv
 │   └── processed/
-│       └── clean_superstore.csv
+│       └── clean_raw_data_example.csv
 │
 ├── etl_pipeline/
 │   ├── extract.py
@@ -78,18 +83,11 @@ DE_Project/
 ---
 
 ## 🗄️ Database Design
-- Database: `de_project`
-- Table: `sales`
-- Primary Key: `row_id` (chosen because `order_id` is not unique)
-- Uses appropriate SQL data types
+
 
 ---
 
 ## 📤 Load Step
-- Converts NaN values to SQL NULL
-- Uses parameterized SQL queries
-- Bulk inserts using `executemany()`
-- Uses `INSERT IGNORE` to ensure idempotent loads
 
 ---
 
@@ -97,28 +95,12 @@ DE_Project/
 
 This project uses a configuration file for paths and database credentials.
 
-### Steps:
-1. Copy the example config file:
-```bash
-cp dev/config.example.py dev/config.py
-```
 
-2. Update the following values in `config.py`:
-- `local_directory`
-- MySQL credentials (`host`, `user`, `password`, `database`)
-
-> ⚠️ `config.py` is intentionally ignored in `.gitignore` to avoid exposing credentials.
 
 ---
 
 ## ▶️ How to Run
 
-1. Create the MySQL database and `sales` table
-2. Update credentials in `dev/config.py`
-3. Run the pipeline:
-```bash
-python main.py
-```
 
 ---
 
@@ -134,5 +116,3 @@ python main.py
 ## 🚀 Future Enhancements
 - Add logging and error handling
 - Implement incremental loads
-- Convert pipeline to PySpark
-- Introduce Airflow for orchestration
