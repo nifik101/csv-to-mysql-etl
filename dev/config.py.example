@@ -1,0 +1,67 @@
+"""Konfigurationsfil för ETL-pipeline.
+
+Läser miljövariabler från .env-fil och definierar paths och inställningar.
+"""
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ladda miljövariabler från .env-fil
+load_dotenv()
+
+# Base directory för projektet
+BASE_DIR = Path(__file__).parent.parent
+
+# Data directories
+DATA_DIR = BASE_DIR / "data"
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+
+# File paths (kan anpassas för olika datatyper)
+raw_file = "Raw_Superstore.csv"
+processed_file = "clean_superstore.csv"
+
+# Local directory (för bakåtkompatibilitet)
+local_directory = str(DATA_DIR)
+
+# CSV encoding (kan anpassas per fil)
+CSV_ENCODING = "latin1"
+
+# Datumformat för datumkonvertering (kan anpassas)
+DATE_FORMAT = "%m/%d/%Y"
+
+# MySQL konfiguration från .env
+MYSQL_CONFIG = {
+    "host": os.getenv("MYSQL_HOST", "localhost"),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", ""),
+    "database": os.getenv("MYSQL_DATABASE", "de_project"),
+}
+
+# Database table configuration (template - kan anpassas)
+DB_TABLE_NAME = "sales"
+DB_COLUMNS = [
+    "row_id",
+    "order_id",
+    "order_date",
+    "ship_date",
+    "ship_mode",
+    "customer_id",
+    "customer_name",
+    "segment",
+    "country",
+    "city",
+    "state",
+    "postal_code",
+    "region",
+    "product_id",
+    "category",
+    "sub_category",
+    "product_name",
+    "sales",
+    "quantity",
+    "discount",
+    "profit",
+    "total_sales",
+]
+
